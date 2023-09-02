@@ -59,6 +59,24 @@ def updatePassword(secret):
         elif option == '99':
             break
 
+def deletePassword(secret):
+    while 1:
+        print("\nDelete password options:")
+        print("(1) show all passwords")
+        print("(2) search password")
+        print("(99) return\n")
+
+        option = input(":")
+
+        if option == '1':
+            utils.removePassword(secret, [])
+            break
+        elif option == '2':
+            utils.removePassword(secret, utils.askData())
+            break
+        elif option == '99':
+            break
+
 def main():
     db = utils.dbconfig()
     secret = utils.checkMaster()
@@ -79,6 +97,8 @@ def main():
             readPassword(secret)
         elif option == 'u':
             updatePassword(secret)
+        elif option == 'd':
+            deletePassword(secret)
         elif option == 'q':
             break
 

@@ -153,7 +153,7 @@ def choosePassword(secret, results):
 
         if select.isdigit() and (int(select) <= len(results) and int(select) > 0):
             break
-        elif select == "q":
+        elif select == "0":
             return ""
 
         rich.print("[yellow][-][/yellow] Selected password is not valid ")
@@ -255,7 +255,7 @@ def editPassword(secret, data):
 
             if select.isdigit() and (int(select) <= len(results) and int(select) > 0):
                 break
-            elif select == "q":
+            elif select == "0":
                 return
 
             rich.print("[yellow][-][/yellow] Selected password is not valid ")
@@ -272,3 +272,30 @@ def editPassword(secret, data):
             db.commit()
 
             rich.print("[green][+][/green] Edited entry ")
+
+def removePassword(secret, data):
+    results = queryPasswords(data)
+
+    if showPasswords(results):
+        while 1:
+            select = input("Delete password #")
+
+            if select.isdigit() and (int(select) <= len(results) and int(select) > 0):
+                break
+            elif select == "0":
+                return
+
+            rich.print("[yellow][-][/yellow] Selected password is not valid ")
+
+        sel = results[int(select)-1]
+        sure = input("Are you sure that you want to delete this passwprd? (y/n)")
+
+        if sure == "y" and secret == checkMaster():
+            db = dbconfig()
+            cursor = db.cursor()
+            sql = "DELETE FROM entries WHERE sitename = ? AND siteurl = ? AND email = ? AND username = ?"
+            val = (sel[0], sel[1], sel[2], sel[3])
+            cursor.execute(sql, val)
+            db.commit()
+
+            rich.print("[red][!] Deleted entry [/red]")
