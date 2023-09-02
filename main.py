@@ -15,9 +15,23 @@ def createPassword(secret):
         option = input(":")
 
         if option == '1':
-            utils.addPassword(secret, utils.getData(), utils.getPassword("Password: "))
+            utils.addPassword(secret, utils.askData(), utils.askPassword("Password: "))
         elif option == '2':
-            utils.addPassword(secret, utils.getData(), utils.newPassword())
+            utils.addPassword(secret, utils.askData(), utils.newPassword())
+        elif option == '99':
+            break
+
+def readPassword(secret):
+    while 1:
+        print("\nRead password options:")
+        print("(1) show all passwords")
+        print("(2) search password")
+        print("(99) return\n")
+
+        option = input(":")
+
+        if option == '1':
+            utils.getPassword(secret, [])
         elif option == '99':
             break
 
@@ -37,6 +51,8 @@ def main():
 
         if option == 'c':
             createPassword(secret)
+        elif option == 'r':
+            readPassword(secret)
         elif option == 'q':
             break
 

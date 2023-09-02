@@ -9,6 +9,26 @@ from Crypto.Protocol.KDF import PBKDF2
 import random
 import string
 import pyperclip
+from rich.console import Console
+from rich.table import Table
+
+def encryptPassword(key, message):
+    cipher = AES.new(key, AES.MODE_EAX)
+    nonce = cipher.nonce
+    ciphertext, tag = cipher.encrypt_and_digest(message.encode('utf-8'))
+    return nonce + ciphertext + tag
+
+def decryptPassword(key, ciphertext):
+    nonce = ciphertext[:16]
+    tag = ciphertext[-16:]
+    ciphertext = ciphertext[16:-16]
+    cipher = AES.new(key, AES.MODE_EAX, nonce=nonce)
+    plaintext = cipher.decrypt(ciphertext)
+    try:
+        cipher.verify(tag)
+        return plaintext.decode('utf-8')
+    except ValueError:
+        return None
 
 def dbconfig():
     db = sqlite3.connect("db.sqlite3")
@@ -29,7 +49,7 @@ def dbconfig():
 
     return db
 
-def getData():
+def askData():
     sitename = input("Site Name: ")
     siteurl = input("Site URL: ")
     email = input("Email: ")
@@ -37,7 +57,7 @@ def getData():
 
     return [sitename, siteurl, email, username]
 
-def getPassword(message):
+def askPassword(message):
     while 1:
         password = getpass(message)
 
@@ -51,7 +71,7 @@ def getPassword(message):
 def createSecret():
     rich.print("[green][+] Creating new config [/green]")
 
-    password = getPassword("Choose a MASTER PASSWORD: ")
+    password = askPassword("Choose a MASTER PASSWORD: ")
 
     password_hash = hashlib.sha256(password.encode()).hexdigest()
     rich.print("[green][+][/green] Generated hash of MASTER PASSWORD")
@@ -97,12 +117,6 @@ def computeMasterKey(secret):
     key = PBKDF2(password, salt, 32, count=1000000, hmac_hash_module=SHA512)
     return key
 
-def encryptPassword(key, message):
-    cipher = AES.new(key, AES.MODE_EAX)
-    nonce = cipher.nonce
-    ciphertext, tag = cipher.encrypt_and_digest(message.encode('utf-8'))
-    return nonce + ciphertext + tag
-
 def addPassword(secret, data, password):
     mk = computeMasterKey(secret)
     encrypted = encryptPassword(mk, password)
@@ -129,3 +143,53 @@ def newPassword(length=12):
     rich.print("[green][+][/green] Password generated and copied to clipboard")
 
     return newpass
+
+def choosePassword(secret, results):
+    while 1:
+        select = input("Copy password #")
+
+        if select.isdigit() and (int(select) <= len(results) and int(select) > 0):
+            break
+
+        rich.print("[yellow][-][/yellow] Selected password is not valid ")
+    
+    mk = computeMasterKey(secret)
+    decrypted = decryptPassword(mk, results[int(select)-1][4])
+
+    pyperclip.copy(decrypted)
+    rich.print("[green][+][/green] Password copied to clipboard")
+
+def getPassword(secret, data):
+    mk = computeMasterKey(secret)
+    
+    db = dbconfig()
+    cursor = db.cursor()
+    sql = ""
+
+    if len(data) == 0:
+        sql = "SELECT * FROM entries"
+
+    cursor.execute(sql)
+    results = cursor.fetchall()
+
+    if len(results) == 0:
+        rich.print("[yellow][-][/yellow] No results for the search")
+        return
+    
+    table = Table(title="Results")
+    table.add_column("#")
+    table.add_column("Site Name")
+    table.add_column("URL")
+    table.add_column("Email")
+    table.add_column("Username")
+    table.add_column("Password")
+
+    for i in results:
+        table.add_row(str(results.index(i)+1), i[0], i[1], i[2], i[3], "{hidden}")
+
+    console = Console()
+    console.print(table)
+
+    choosePassword(secret, results)
+
+    return
