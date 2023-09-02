@@ -121,14 +121,17 @@ def addPassword(secret, data, password):
     mk = computeMasterKey(secret)
     encrypted = encryptPassword(mk, password)
 
-    db = dbconfig()
-    cursor = db.cursor()
-    sql = "INSERT INTO entries (sitename, siteurl, email, username, password) values (?, ?, ?, ?, ?)"
-    val = (data[0], data[1], data[2], data[3], encrypted)
-    cursor.execute(sql, val)
-    db.commit()
+    if len(queryPasswords(data)) == 0:
+        db = dbconfig()
+        cursor = db.cursor()
+        sql = "INSERT INTO entries (sitename, siteurl, email, username, password) values (?, ?, ?, ?, ?)"
+        val = (data[0], data[1], data[2], data[3], encrypted)
+        cursor.execute(sql, val)
+        db.commit()
 
-    rich.print("[green][+][/green] Added entry ")
+        rich.print("[green][+][/green] Added entry ")
+    else:
+        rich.print("[yellow][-][/yellow] Entry with these details already exists")
 
 def newPassword(length=12):
     rich.print("[red][+][/red] Specify length of the password to generate (default 12) ")
@@ -150,16 +153,17 @@ def choosePassword(secret, results):
 
         if select.isdigit() and (int(select) <= len(results) and int(select) > 0):
             break
+        elif select == "q":
+            return ""
 
         rich.print("[yellow][-][/yellow] Selected password is not valid ")
     
     mk = computeMasterKey(secret)
     decrypted = decryptPassword(mk, results[int(select)-1][4])
 
-    pyperclip.copy(decrypted)
-    rich.print("[green][+][/green] Password copied to clipboard")
+    return decrypted
 
-def queryPassword(form, query):
+def searchPassword(form, query):
     columns = ['sitename', 'siteurl', 'email', 'username']
     j = 0
 
@@ -172,24 +176,10 @@ def queryPassword(form, query):
     
     return query
 
-def getPassword(secret, data):
-    mk = computeMasterKey(secret)
-    
-    db = dbconfig()
-    cursor = db.cursor()
-    sql = ""
-
-    if len(data) == 0:
-        sql = "SELECT * FROM entries"
-    else:
-        sql = queryPassword(data, "SELECT * FROM entries WHERE ")
-
-    cursor.execute(sql)
-    results = cursor.fetchall()
-
+def showPasswords(results):
     if len(results) == 0:
         rich.print("[yellow][-][/yellow] No results for the search ")
-        return
+        return False
     
     table = Table(title="Results")
     table.add_column("#")
@@ -205,6 +195,80 @@ def getPassword(secret, data):
     console = Console()
     console.print(table)
 
-    choosePassword(secret, results)
+    return True
 
-    return
+def queryPasswords(data):
+    db = dbconfig()
+    cursor = db.cursor()
+    sql = ""
+
+    if len(data) == 0:
+        sql = "SELECT * FROM entries"
+    else:
+        sql = searchPassword(data, "SELECT * FROM entries WHERE ")
+
+    cursor.execute(sql)
+    results = cursor.fetchall()
+
+    return results
+
+def getPassword(secret, data):
+    results = queryPasswords(data)
+
+    if showPasswords(results):
+        decrypted = choosePassword(secret, results)
+        if decrypted:
+            pyperclip.copy(decrypted)
+            rich.print("[green][+][/green] Password copied to clipboard")
+        else:
+            rich.print("[red][!] ERROR WHILE DECYPTION [/red]")
+
+def setNewPassword(secret):
+    while 1:
+        print("\nSet new password options:")
+        print("(a) set password")
+        print("(b) set random password")
+        print("(z) return\n")
+
+        option = input(":")
+
+        if option == 'a':
+            password = askPassword("New password: ")
+            break
+        elif option == 'b':
+            password = newPassword()
+            break
+        elif option == 'z':
+            return None
+    
+    mk = computeMasterKey(secret)
+    encrypted = encryptPassword(mk, password)
+
+    return encrypted
+
+def editPassword(secret, data):
+    results = queryPasswords(data)
+
+    if showPasswords(results):
+        while 1:
+            select = input("Edit password #")
+
+            if select.isdigit() and (int(select) <= len(results) and int(select) > 0):
+                break
+            elif select == "q":
+                return
+
+            rich.print("[yellow][-][/yellow] Selected password is not valid ")
+
+        sel = results[int(select)-1]
+        pwd = setNewPassword(secret)
+
+        if pwd:
+            db = dbconfig()
+            cursor = db.cursor()
+            sql = "UPDATE entries SET password = ? WHERE sitename = ? AND siteurl = ? AND email = ? AND username = ?"
+            val = (pwd ,sel[0], sel[1], sel[2], sel[3])
+            cursor.execute(sql, val)
+            db.commit()
+
+            rich.print("[green][+][/green] Edited entry ")
