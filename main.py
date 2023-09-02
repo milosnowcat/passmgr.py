@@ -4,7 +4,6 @@
 # podra generar claves aleatorias
 
 import utils
-import os
 
 def createPassword(secret):
     while 1:
@@ -16,7 +15,9 @@ def createPassword(secret):
         option = input(":")
 
         if option == '1':
-            utils.addPassword(secret)
+            utils.addPassword(secret, utils.getData(), utils.getPassword("Password: "))
+        elif option == '2':
+            utils.addPassword(secret, utils.getData(), utils.newPassword())
         elif option == '99':
             break
 

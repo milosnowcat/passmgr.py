@@ -3,10 +3,12 @@ import rich
 from getpass import getpass
 import hashlib
 from Crypto.Random import get_random_bytes
-import os
 from Crypto.Cipher import AES
 from Crypto.Hash import SHA512
 from Crypto.Protocol.KDF import PBKDF2
+import random
+import string
+import pyperclip
 
 def dbconfig():
     db = sqlite3.connect("db.sqlite3")
@@ -27,16 +29,29 @@ def dbconfig():
 
     return db
 
-def createSecret():
-    rich.print("[green][+] Creating new config [/green]")
+def getData():
+    sitename = input("Site Name: ")
+    siteurl = input("Site URL: ")
+    email = input("Email: ")
+    username = input("Username: ")
 
+    return [sitename, siteurl, email, username]
+
+def getPassword(message):
     while 1:
-        password = getpass("Choose a MASTER PASSWORD: ")
+        password = getpass(message)
 
         if password == getpass("Re-type: ") and password != "":
             break
 
         rich.print("[yellow][-] Please try again.[/yellow]")
+    
+    return password
+
+def createSecret():
+    rich.print("[green][+] Creating new config [/green]")
+
+    password = getPassword("Choose a MASTER PASSWORD: ")
 
     password_hash = hashlib.sha256(password.encode()).hexdigest()
     rich.print("[green][+][/green] Generated hash of MASTER PASSWORD")
@@ -72,7 +87,6 @@ def checkMaster():
             break
         else:
             rich.print("[red][!] WRONG! [/red]")
-            exit()
 
     db.close()
     return [password, result[1]]
@@ -89,28 +103,29 @@ def encryptPassword(key, message):
     ciphertext, tag = cipher.encrypt_and_digest(message.encode('utf-8'))
     return nonce + ciphertext + tag
 
-def addPassword(secret):
-    sitename = input("Site Name: ")
-    siteurl = input("Site URL: ")
-    email = input("Email: ")
-    username = input("Username: ")
-
-    while 1:
-        site_password = getpass()
-
-        if site_password == getpass("Re-type: ") and site_password != "":
-            break
-
-        rich.print("[yellow][-] Please try again.[/yellow]")
-
+def addPassword(secret, data, password):
     mk = computeMasterKey(secret)
-    site_encrypted = encryptPassword(mk, site_password)
+    encrypted = encryptPassword(mk, password)
 
     db = dbconfig()
     cursor = db.cursor()
     sql = "INSERT INTO entries (sitename, siteurl, email, username, password) values (?, ?, ?, ?, ?)"
-    val = (sitename, siteurl, email, username, site_encrypted)
+    val = (data[0], data[1], data[2], data[3], encrypted)
     cursor.execute(sql, val)
     db.commit()
 
     rich.print("[green][+][/green] Added entry ")
+
+def newPassword(length=12):
+    rich.print("[red][+][/red] Specify length of the password to generate (default 12) ")
+    nlength = input()
+
+    if nlength != length and nlength.isdigit():
+        length = int(nlength)
+
+    newpass = ''.join([random.choice(string.ascii_letters + string.digits + string.punctuation ) for n in range(length)])
+
+    pyperclip.copy(newpass)
+    rich.print("[green][+][/green] Password generated and copied to clipboard")
+
+    return newpass
