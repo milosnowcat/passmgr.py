@@ -159,6 +159,19 @@ def choosePassword(secret, results):
     pyperclip.copy(decrypted)
     rich.print("[green][+][/green] Password copied to clipboard")
 
+def queryPassword(form, query):
+    columns = ['sitename', 'siteurl', 'email', 'username']
+    j = 0
+
+    for i in range(4):
+        if form[i] != "":
+            if j != 0:
+                query += " AND "
+            query += f"{columns[i]} = '{form[i]}'"
+            j += 1
+    
+    return query
+
 def getPassword(secret, data):
     mk = computeMasterKey(secret)
     
@@ -168,12 +181,14 @@ def getPassword(secret, data):
 
     if len(data) == 0:
         sql = "SELECT * FROM entries"
+    else:
+        sql = queryPassword(data, "SELECT * FROM entries WHERE ")
 
     cursor.execute(sql)
     results = cursor.fetchall()
 
     if len(results) == 0:
-        rich.print("[yellow][-][/yellow] No results for the search")
+        rich.print("[yellow][-][/yellow] No results for the search ")
         return
     
     table = Table(title="Results")

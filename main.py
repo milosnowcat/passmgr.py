@@ -32,6 +32,8 @@ def readPassword(secret):
 
         if option == '1':
             utils.getPassword(secret, [])
+        elif option == '2':
+            utils.getPassword(secret, utils.askData())
         elif option == '99':
             break
 
