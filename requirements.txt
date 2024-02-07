@@ -1,6 +1,7 @@
 markdown-it-py==3.0.0
 mdurl==0.1.2
-pycryptodome==3.18.0
+pycryptodome==3.20.0
 Pygments==2.16.1
 pyperclip==1.8.2
 rich==13.5.2
+ShieldCipher==1.0.3

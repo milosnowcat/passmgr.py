@@ -2,56 +2,12 @@ import sqlite3
 import rich
 from getpass import getpass
 import hashlib
-from Crypto.Random import get_random_bytes
-from Crypto.Cipher import AES
-from Crypto.Hash import SHA512
-from Crypto.Protocol.KDF import PBKDF2
 import random
 import string
 import pyperclip
 from rich.console import Console
 from rich.table import Table
-
-def encryptPassword(key, message):
-    """
-    The function encrypts a message using the AES encryption algorithm with a given key.
-    
-    :param key: The key parameter is the encryption key used to encrypt the message. It should be a byte
-    string of length 16, 24, or 32, corresponding to AES-128, AES-192, or AES-256 encryption
-    respectively
-    :param message: The `message` parameter is the plaintext message that you want to encrypt. It should
-    be a string
-    :return: the encrypted password, which includes the nonce, ciphertext, and tag.
-    """
-    cipher = AES.new(key, AES.MODE_EAX)
-    nonce = cipher.nonce
-    ciphertext, tag = cipher.encrypt_and_digest(message.encode('utf-8'))
-    return nonce + ciphertext + tag
-
-def decryptPassword(key, ciphertext):
-    """
-    The function `decryptPassword` takes a key and a ciphertext as input, decrypts the ciphertext using
-    AES encryption, and returns the plaintext password if the decryption is successful, otherwise it
-    returns None.
-    
-    :param key: The key parameter is the encryption key used to encrypt the plaintext. It should be a
-    byte string of length 16, 24, or 32, corresponding to AES-128, AES-192, or AES-256 encryption
-    respectively
-    :param ciphertext: The `ciphertext` parameter is the encrypted message that needs to be decrypted.
-    It is a byte string that contains the encrypted data
-    :return: the decrypted plaintext as a string if the decryption is successful. If the decryption
-    fails, it returns None.
-    """
-    nonce = ciphertext[:16]
-    tag = ciphertext[-16:]
-    ciphertext = ciphertext[16:-16]
-    cipher = AES.new(key, AES.MODE_EAX, nonce=nonce)
-    plaintext = cipher.decrypt(ciphertext)
-    try:
-        cipher.verify(tag)
-        return plaintext.decode('utf-8')
-    except ValueError:
-        return None
+from ShieldCipher.encryption.symmetric import encrypt_aes, decrypt_aes, compute_key, get_random_bytes
 
 def dbconfig():
     """
@@ -162,20 +118,6 @@ def checkMaster():
     db.close()
     return [password, result[1]]
 
-def computeMasterKey(secret):
-    """
-    The function `computeMasterKey` takes a secret as input, encodes the first element of the secret as
-    a password, and uses PBKDF2 with SHA512 to generate a key using the password and salt.
-    
-    :param secret: The `secret` parameter is a list containing two elements. The first element is the
-    password, which should be a string. The second element is the salt, which should be a byte string
-    :return: the computed master key.
-    """
-    password = secret[0].encode()
-    salt = secret[1]
-    key = PBKDF2(password, salt, 32, count=1000000, hmac_hash_module=SHA512)
-    return key
-
 def addPassword(secret, data, password):
     """
     The function `addPassword` adds an encrypted password entry to a database if an entry with the same
@@ -187,8 +129,8 @@ def addPassword(secret, data, password):
     :param data: The `data` parameter is a list that contains the following information:
     :param password: The `password` parameter is the password that you want to add to the database
     """
-    mk = computeMasterKey(secret)
-    encrypted = encryptPassword(mk, password)
+    mk = compute_key(*secret)
+    encrypted = encrypt_aes(mk, password)
 
     if len(queryPasswords(data)) == 0:
         db = dbconfig()
@@ -246,8 +188,8 @@ def choosePassword(secret, results):
 
         rich.print("[yellow][-][/yellow] Selected password is not valid ")
     
-    mk = computeMasterKey(secret)
-    decrypted = decryptPassword(mk, results[int(select)-1][4])
+    mk = compute_key(*secret)
+    decrypted = decrypt_aes(mk, results[int(select)-1][4])
 
     return decrypted
 
@@ -375,8 +317,8 @@ def setNewPassword(secret):
         elif option == 'z':
             return None
     
-    mk = computeMasterKey(secret)
-    encrypted = encryptPassword(mk, password)
+    mk = compute_key(*secret)
+    encrypted = encrypt_aes(mk, password)
 
     return encrypted
 
