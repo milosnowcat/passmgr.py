@@ -211,9 +211,12 @@ def searchPassword(form, query):
         if form[i] != "":
             if j != 0:
                 query += " AND "
+            else:
+                query += " WHERE "
+                
             query += f"{columns[i]} = '{form[i]}'"
             j += 1
-    
+
     return query
 
 def showPasswords(results):
@@ -263,7 +266,7 @@ def queryPasswords(data):
     if len(data) == 0:
         sql = "SELECT * FROM entries"
     else:
-        sql = searchPassword(data, "SELECT * FROM entries WHERE ")
+        sql = searchPassword(data, "SELECT * FROM entries")
 
     cursor.execute(sql)
     results = cursor.fetchall()
