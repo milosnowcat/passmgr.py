@@ -106,17 +106,22 @@ def checkMaster():
         cursor = db.cursor()
         sql = "SELECT * FROM secrets"
         cursor.execute(sql)
-        result = cursor.fetchall()[0]
+        results = cursor.fetchall()
+        
+        result = []
+        for i in enumerate(results):
+            if password_hash in i[1]:
+                result.append(i[0])
 
-        if result == None:
+        if not results:
             createSecret()
-        elif password_hash == result[0]:
+        elif result:
             break
         else:
             rich.print("[red][!] WRONG! [/red]")
 
     db.close()
-    return [password, result[1]]
+    return [password, results[result[0]][1]]
 
 def addPassword(secret, data, password):
     """
