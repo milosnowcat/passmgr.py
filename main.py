@@ -149,6 +149,22 @@ def deletePassword(secret):
         elif option == '99':
             break
 
+def settings(secret):
+    while 1:
+        print("\nSettings options:")
+        print("(1) change MASTER PASSWORD")
+        print("(99) return\n")
+
+        option = input(":")
+
+        if option == '1':
+            utils.createSecret()
+            print("TYPE YOUR NEW MASTER PASSWORD")
+            utils.changeMaster(secret, utils.checkMaster())
+            break
+        elif option == '99':
+            break
+
 def main():
     """
     The main function provides a menu-driven interface for creating, reading, updating, and deleting
@@ -163,6 +179,7 @@ def main():
         print("(r)ead password")
         print("(u)pdate password")
         print("(d)elete password")
+        print("(s)ettings")
         print("(q)uit\n")
 
         option = input(":")
@@ -175,6 +192,9 @@ def main():
             updatePassword(secret)
         elif option == 'd':
             deletePassword(secret)
+        elif option == 's':
+            settings(secret)
+            break
         elif option == 'q':
             break
 

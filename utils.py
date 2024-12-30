@@ -8,6 +8,7 @@ import pyperclip
 from rich.console import Console
 from rich.table import Table
 from ShieldCipher.encryption.symmetric import encrypt_aes, decrypt_aes, compute_key, get_random_bytes
+from tqdm import tqdm
 
 def dbconfig():
     """
@@ -330,6 +331,14 @@ def setNewPassword(secret):
 
     return encrypted
 
+def updatePassword(pwd, sel):
+    db = dbconfig()
+    cursor = db.cursor()
+    sql = "UPDATE entries SET password = ? WHERE sitename = ? AND siteurl = ? AND email = ? AND username = ?"
+    val = (pwd ,sel[0], sel[1], sel[2], sel[3])
+    cursor.execute(sql, val)
+    db.commit()
+
 def editPassword(secret, data):
     """
     The function `editPassword` allows the user to select and edit a password entry in a database.
@@ -359,13 +368,7 @@ def editPassword(secret, data):
         pwd = setNewPassword(secret)
 
         if pwd:
-            db = dbconfig()
-            cursor = db.cursor()
-            sql = "UPDATE entries SET password = ? WHERE sitename = ? AND siteurl = ? AND email = ? AND username = ?"
-            val = (pwd ,sel[0], sel[1], sel[2], sel[3])
-            cursor.execute(sql, val)
-            db.commit()
-
+            updatePassword()
             rich.print("[green][+][/green] Edited entry ")
 
 def removePassword(secret, data):
@@ -394,7 +397,7 @@ def removePassword(secret, data):
             rich.print("[yellow][-][/yellow] Selected password is not valid ")
 
         sel = results[int(select)-1]
-        sure = input("Are you sure that you want to delete this passwprd? (y/n)")
+        sure = input("Are you sure that you want to delete this password? (y/n)")
 
         if sure == "y" and secret == checkMaster():
             db = dbconfig()
@@ -405,3 +408,32 @@ def removePassword(secret, data):
             db.commit()
 
             rich.print("[red][!] Deleted entry [/red]")
+
+def deleteMaster(secret):
+    password_hash = hashlib.sha256(secret[0].encode()).hexdigest()
+    
+    db = dbconfig()
+    cursor = db.cursor()
+    sql = "DELETE FROM secrets WHERE master_password = ? AND secret_key = ?"
+    val = (password_hash, secret[1])
+    cursor.execute(sql, val)
+    db.commit()
+
+    rich.print("[red][!] Deleted old MASTER PASSWORD [/red]")
+
+def changeMaster(secret, new_secret):
+    rich.print("[yellow][!] Encrypting your passwords with the new MASTER PASSWORD [/yellow]")
+    rich.print("[red][!] Do not close the program [/red]")
+
+    results = queryPasswords([])
+
+    for password in tqdm(results, desc="Processing passwords"):
+        mk = compute_key(*secret)
+        decrypted = decrypt_aes(mk, password[4])
+
+        new_mk = compute_key(*new_secret)
+        encrypted = encrypt_aes(new_mk, decrypted)
+
+        updatePassword(encrypted, password)
+    
+    deleteMaster(secret)
