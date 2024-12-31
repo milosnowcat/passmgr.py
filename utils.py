@@ -339,6 +339,48 @@ def updatePassword(pwd, sel):
     cursor.execute(sql, val)
     db.commit()
 
+def updatePasswordData(old_data, new_data):
+    db = dbconfig()
+    cursor = db.cursor()
+    sql = "UPDATE entries SET sitename = ?, siteurl = ?, email = ?, username = ? WHERE sitename = ? AND siteurl = ? AND email = ? AND username = ?"
+    val = (new_data[0], new_data[1], new_data[2], new_data[3], old_data[0], old_data[1], old_data[2], old_data[3])
+    cursor.execute(sql, val)
+    db.commit()
+
+def editPasswordOptions():
+    while 1:
+        print("\nUpdate password options:")
+        print("(1) set new password")
+        print("(2) edit password info")
+        print("(99) return\n")
+
+        option = input(":")
+
+        if option == '1' or option == '2' or option == '99':
+            break
+
+    return option
+
+def editPasswordData(old_data):
+    rich.print("[green][+] Current password info: [/green]")
+    print(f"Site Name: {old_data[0]}")
+    print(f"Site URL: {old_data[1]}")
+    print(f"Email: {old_data[2]}")
+    print(f"Username: {old_data[3]}")
+
+    rich.print("[yellow][-] Leave blank to mantain same info [/yellow]")
+    new_data = askData()
+
+    for i in range(4):
+        if new_data[i] == "":
+            new_data[i] = old_data[i]
+
+    if len(queryPasswords(new_data)) == 0:
+        updatePasswordData(old_data, new_data)
+        rich.print("[green][+][/green] Edited entry ")
+    else:
+        rich.print("[yellow][-][/yellow] Entry with these details already exists")
+
 def editPassword(secret, data):
     """
     The function `editPassword` allows the user to select and edit a password entry in a database.
@@ -365,11 +407,17 @@ def editPassword(secret, data):
             rich.print("[yellow][-][/yellow] Selected password is not valid ")
 
         sel = results[int(select)-1]
-        pwd = setNewPassword(secret)
 
-        if pwd:
-            updatePassword()
-            rich.print("[green][+][/green] Edited entry ")
+        option = editPasswordOptions()
+
+        if option == '1':
+            pwd = setNewPassword(secret)
+
+            if pwd:
+                updatePassword(pwd, sel)
+                rich.print("[green][+][/green] Edited entry ")
+        elif option == '2':
+            editPasswordData(sel)
 
 def removePassword(secret, data):
     """
@@ -422,7 +470,7 @@ def deleteMaster(secret):
     rich.print("[red][!] Deleted old MASTER PASSWORD [/red]")
 
 def changeMaster(secret, new_secret):
-    rich.print("[yellow][!] Encrypting your passwords with the new MASTER PASSWORD [/yellow]")
+    rich.print("[yellow][-] Encrypting your passwords with the new MASTER PASSWORD [/yellow]")
     rich.print("[red][!] Do not close the program [/red]")
 
     results = queryPasswords([])
