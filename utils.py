@@ -485,3 +485,21 @@ def changeMaster(secret, new_secret):
         updatePassword(encrypted, password)
     
     deleteMaster(secret)
+
+def importPasswordsFromSqlite(secret):
+    print("\nEnter path to db.sqlite3 file:")
+    path = input(":")
+
+def importPasswords(secret):
+    while 1:
+        print("\nImport password options:")
+        print("(a) import from another passmgr.py file (db.sqlite3)")
+        print("(z) return\n")
+
+        option = input(":")
+
+        if option == 'a':
+            importPasswordsFromSqlite(secret)
+            break
+        elif option == 'z':
+            break
