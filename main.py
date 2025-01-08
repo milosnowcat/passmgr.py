@@ -158,10 +158,17 @@ def settings(secret):
         option = input(":")
 
         if option == '1':
-            utils.createSecret()
-            print("TYPE YOUR NEW MASTER PASSWORD")
-            utils.changeMaster(secret, utils.checkMaster())
-            break
+            if utils.createSecret():
+                while 1:
+                    print("TYPE YOUR NEW MASTER PASSWORD")
+                    new_secret = utils.checkMaster()
+
+                    if new_secret != secret:
+                        utils.changeMaster(secret, new_secret)
+                        break
+                    else:
+                        print("\n\n\n\nERROR")
+                break
         elif option == '99':
             break
 

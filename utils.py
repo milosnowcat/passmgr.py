@@ -66,6 +66,19 @@ def askPassword(message):
     
     return password
 
+def checkSecretDuplication(password_hash):
+    db = dbconfig()
+    cursor = db.cursor()
+    sql = f"SELECT * FROM secrets WHERE master_password = '{password_hash}'"
+    cursor.execute(sql)
+    results = cursor.fetchall()
+
+    if len(results) == 0:
+        return False
+    else:
+        rich.print("[red][!][/red] This MASTER PASSWORD already exists")
+        return True
+
 def createSecret():
     """
     The function `createSecret()` creates a new configuration by generating a password hash, a secret
@@ -81,16 +94,21 @@ def createSecret():
     key = get_random_bytes(16)
     rich.print("[green][+][/green] Secret Key generated")
 
-    db = dbconfig()
-    cursor = db.cursor()
-    sql = "INSERT INTO secrets (master_password, secret_key) values (?, ?)"
-    val = (password_hash, key)
-    cursor.execute(sql, val)
-    db.commit()
+    if not checkSecretDuplication(password_hash):
+        db = dbconfig()
+        cursor = db.cursor()
+        sql = "INSERT INTO secrets (master_password, secret_key) values (?, ?)"
+        val = (password_hash, key)
+        cursor.execute(sql, val)
+        db.commit()
 
-    rich.print("[green][+][/green] Added to the database")
+        rich.print("[green][+][/green] Added to the database")
 
-    rich.print("[green][+] Configuration done![/green]")
+        rich.print("[green][+] Configuration done![/green]")
+
+        return True
+    else:
+        return False
 
 def checkMaster():
     """
